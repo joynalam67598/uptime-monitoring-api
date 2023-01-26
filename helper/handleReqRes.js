@@ -35,28 +35,26 @@ handler.handleReqRes = (req, res) => {
     ? routes[trimedPath]
     : notFoundHandler;
 
-  choosenHandler(requestProperties, (statusCode, payload) => {
-    // callback function
-    // will call from choosen handler
-    // to get the status and payload.
-    statusCode = typeof statusCode === "number" ? statusCode : 500;
-    payload = typeof payload === "object" ? payload : {};
-
-    const payloadString = JSON.stringify(payload);
-
-    // return the final response.
-    res.writeHead(statusCode);
-    res.end(payloadString); //at the end return the payload.
-  });
-
   req.on("data", (buffer) => {
     orginalData += decoder.write(buffer);
   });
 
   req.on("end", () => {
     orginalData += decoder.end();
-    // after firing end event then we get the full data.
-    console.log(orginalData);
+    // after firing end event then we get the full data.  
+    choosenHandler(requestProperties, (statusCode, payload) => {
+      // callback function
+      // will call from choosen handler
+      // to get the status and payload.
+      statusCode = typeof statusCode === "number" ? statusCode : 500;
+      payload = typeof payload === "object" ? payload : {};
+
+      const payloadString = JSON.stringify(payload);
+
+      // return the final response.
+      res.writeHead(statusCode);
+      res.end(payloadString); //at the end return the payload.
+    });
     res.end("Hello");
   });
 };
