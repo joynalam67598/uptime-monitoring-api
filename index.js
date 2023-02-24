@@ -1,7 +1,7 @@
 //dependencies
 const http = require("http");
-const { handleReqRes } = require("./helper/handleReqRes");
-const environment = require("./helper/environments");
+const { handleReqRes } = require("./helpers/handleReqRes");
+const environment = require("./helpers/environments");
 const data = require("./lib/data");
 
 //app object - module scaffolding

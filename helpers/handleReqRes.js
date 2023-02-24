@@ -5,6 +5,7 @@ const routes = require("../routes");
 const {
   notFoundHandler,
 } = require("../handlers/routeHandlers/notFoundHandler");
+const { utilities, parseJSON } = require("../helpers/utilities");
 
 //Module scaffolding
 const handler = {};
@@ -41,7 +42,8 @@ handler.handleReqRes = (req, res) => {
 
   req.on("end", () => {
     orginalData += decoder.end();
-    // after firing end event then we get the full data.  
+    requestProperties.body = parseJSON(orginalData);
+    // after firing end event then we get the full data.
     choosenHandler(requestProperties, (statusCode, payload) => {
       // callback function
       // will call from choosen handler
@@ -52,6 +54,7 @@ handler.handleReqRes = (req, res) => {
       const payloadString = JSON.stringify(payload);
 
       // return the final response.
+      res.setHeader("Content-Type", "application/json"); // return type declaration
       res.writeHead(statusCode);
       res.end(payloadString); //at the end return the payload.
     });
