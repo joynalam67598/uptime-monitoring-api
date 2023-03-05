@@ -28,5 +28,22 @@ utilities.hash = (password) => {
   }
 };
 
+//create random string
+utilities.createRandomString = (size) => {
+  let length = size;
+  length = typeof size === "number" && size > 0 ? size : false;
+  if (length) {
+    let possibleChars = "abcdefghijklmnopqurstuvwxyz0123456789";
+    let output = "";
+    for (let i = 1; i <= length; i += 1) {
+      let randomChar = possibleChars.charAt(
+        Math.floor(Math.random() * possibleChars.length)
+      );
+      output += randomChar;
+    }
+  }
+  return false;
+};
+
 //export module.
 module.exports = utilities;
