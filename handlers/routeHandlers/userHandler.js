@@ -2,6 +2,7 @@
 const data = require("../../lib/data");
 const hash = require("../../helpers/utilities");
 const { parseJSON } = require("../../helpers/utilities");
+const tokenHandler = require("./tokenHandler");
 
 //module scaffolding
 const handler = {};
@@ -27,16 +28,31 @@ handler._users.get = (requestProperties, callback) => {
       ? requestProperties.queryStringObject.phone
       : false;
   if (phone) {
-    data.read("users", phone, (err, usr) => {
-      const user = { ...parseJSON(usr) };
-      //file exists
-      if (!err && user) {
-        //store data
-        delete user.password;
-        callback(200, user);
+    // verify token
+    let token =
+      typeof requestProperties.headerObject.token === "string"
+        ? requestProperties.headerObject.token
+        : false;
+
+    tokenHandler._token.verify(token, phone, (tokenFound) => {
+      if (tokenFound) {
+        //lookup user
+        data.read("users", phone, (err, usr) => {
+          const user = { ...parseJSON(usr) };
+          //file exists
+          if (!err && user) {
+            //store data
+            delete user.password;
+            callback(200, user);
+          } else {
+            callback(500, {
+              error: "Server error.",
+            });
+          }
+        });
       } else {
-        callback(500, {
-          error: "Server error.",
+        callback(403, {
+          error: "User Authentication failed.",
         });
       }
     });
@@ -77,29 +93,42 @@ handler._users.post = (requestProperties, callback) => {
       : false;
 
   if (firstName && lastName && phone && password && tosAgreement) {
-    //check user already exists
-    data.read("users", phone, (err, user) => {
-      //file not exists
-      if (err) {
-        const userData = {
-          firstName,
-          lastName,
-          phone,
-          password: hash(password),
-          tosAgreement,
-        };
+    let token =
+      typeof requestProperties.headerObject.token === "string"
+        ? requestProperties.headerObject.token
+        : false;
 
-        //store data
-        data.create("users", phone, userData, (err) => {
-          if (!err) {
-            callback(200, { message: "User was created successfully!" });
+    tokenHandler._token.verify(token, phone, (tokenFound) => {
+      if (tokenFound) {
+        //check user already exists
+        data.read("users", phone, (err, user) => {
+          //file not exists
+          if (err) {
+            const userData = {
+              firstName,
+              lastName,
+              phone,
+              password: hash(password),
+              tosAgreement,
+            };
+
+            //store data
+            data.create("users", phone, userData, (err) => {
+              if (!err) {
+                callback(200, { message: "User was created successfully!" });
+              } else {
+                callback(500, { error: "Could not create user!" });
+              }
+            });
           } else {
-            callback(500, { error: "Could not create user!" });
+            callback(500, {
+              error: "Server error.",
+            });
           }
         });
       } else {
-        callback(500, {
-          error: "Server error.",
+        callback(403, {
+          error: "User Authentication failed.",
         });
       }
     });
@@ -140,30 +169,38 @@ handler._users.put = (requestProperties, callback) => {
         ? requestProperties.body.tosAgreement
         : false;
     if (firstName || lastName || password) {
-      data.read("users", phone, (err, usrData) => {
-        const userData = { ...parseJSON(usrData) };
-        if (!err) {
-          if (firstName) {
-            userData.firstName = firstName;
-          }
-          if (lastName) {
-            userData.lastName = lastName;
-          }
-          if (password) {
-            userData.password = hash(password);
-          }
-          data.update("users", phone, userData, (err) => {
+      tokenHandler._token.verify(token, phone, (tokenFound) => {
+        if (tokenFound) {
+          data.read("users", phone, (err, usrData) => {
+            const userData = { ...parseJSON(usrData) };
             if (!err) {
-              callback(200, { message: "User was updated successfully!" });
+              if (firstName) {
+                userData.firstName = firstName;
+              }
+              if (lastName) {
+                userData.lastName = lastName;
+              }
+              if (password) {
+                userData.password = hash(password);
+              }
+              data.update("users", phone, userData, (err) => {
+                if (!err) {
+                  callback(200, { message: "User was updated successfully!" });
+                } else {
+                  callback(500, {
+                    error: "Server error.",
+                  });
+                }
+              });
             } else {
-              callback(500, {
-                error: "Server error.",
+              callback(404, {
+                error: "Invalid User",
               });
             }
           });
         } else {
-          callback(404, {
-            error: "Invalid User",
+          callback(403, {
+            error: "User Authentication failed.",
           });
         }
       });
@@ -185,13 +222,21 @@ handler._users.delete = (requestProperties, callback) => {
       ? requestProperties.queryStringObject.phone
       : false;
   if (phone) {
-    data.read("users", phone, (err, data) => {
-      //file exists
-      if (!err && data) {
-        data.read("users", phone, (err) => {
-          if (!err) {
-            data.delete();
-            callback(200, { message: "User was deleted successfully!" });
+    tokenHandler._token.verify(token, phone, (tokenFound) => {
+      if (tokenFound) {
+        data.read("users", phone, (err, data) => {
+          //file exists
+          if (!err && data) {
+            data.read("users", phone, (err) => {
+              if (!err) {
+                data.delete();
+                callback(200, { message: "User was deleted successfully!" });
+              } else {
+                callback(500, {
+                  error: "Server error.",
+                });
+              }
+            });
           } else {
             callback(500, {
               error: "Server error.",
@@ -199,8 +244,8 @@ handler._users.delete = (requestProperties, callback) => {
           }
         });
       } else {
-        callback(500, {
-          error: "Server error.",
+        callback(403, {
+          error: "User Authentication failed.",
         });
       }
     });
